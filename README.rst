@@ -4,13 +4,7 @@ ISalt: Interactive Salt Programming
 ISalt is an IPython style console to facilitate the debugging or even
 development of Salt code.
 
-.. code-block::
-     __       _______.     ___       __      .___________.
-    |  |     /       |    /   \     |  |     |           |
-    |  |    |   (----`   /  ^  \    |  |     `---|  |----`
-    |  |     \   \      /  /_\  \   |  |         |  |     
-    |  | .----)   |    /  _____  \  |  `----.    |  |     
-    |__| |_______/    /__/     \__\ |_______|    |__|     
+.. image:: https://github.com/mirceaulinic/isalt/blob/master/cover.png
 
 Salt code typically makes use of a number of *dunder* (i.e., _d_ouble 
 _under_score) variables such as ``__salt__``, ``__opts__``, ``__grains__``,
