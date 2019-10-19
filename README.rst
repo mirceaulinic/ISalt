@@ -15,8 +15,14 @@ than ``__opts__`` on the Master side; ``__salt__`` on the Minion side gives you
 access to the list of Execution Modules, while ``__salt__`` on the Master side
 provides the Runners, and so on.
 
-With ISalt, you can easily get access to this, by simply executing ``isalt``, 
-e.g.,
+The main difficulty when working with these variables is that they only make
+sense when actually running Salt and having a Master and eventually one or more
+Minions running. It often happens that you don't necessarily want to have these 
+services running when writing a new function (that use these dunders), or just
+want to quickly debug something without pushing code to production.
+
+With ISalt, you can easily get access to these variables, by simply executing
+``isalt``, e.g.,
 
 .. code-block:: bash
 
@@ -28,7 +34,7 @@ e.g.,
     'Ubuntu-18.04'
 
 In other words, ISalt is an enhanced IPython console which gives you access to
-the Salt global variables you usually make use in your code.
+the Salt global variables typically used in Salt code.
 
 Install
 -------
@@ -51,8 +57,8 @@ Usage
 -----
 
 One of the most important details to keep in mind is the difference between 
-running the code on the Minion side, and Master side (where we can similarly
-distinguish between code to be executed as a Runner, or Execution Module for
+running the code on the Minion side, versus Master side (where we can further
+distinguish between code to be executed as a Runner, vs. Execution Module for
 an arbitrary Minion -- for the former you may need to provide the Minion ID
 using the ``--minion-id`` CLI argument).
 
