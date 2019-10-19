@@ -50,4 +50,61 @@ your environment. It should normally work well with any version.
 Usage
 -----
 
+One of the most important details to keep in mind is the difference between 
+running the code on the Minion side, and Master side (where we can similarly
+distinguish between code to be executed as a Runner, or Execution Module for
+an arbitrary Minion -- for the former you may need to provide the Minion ID
+using the ``--minion-id`` CLI argument).
 
+Typically, when you install ISalt where you have a Salt Minion running, it 
+should be sufficient to execute just ``$ isalt``.
+
+When you want to use ISalt on the Master side, but to test Execution Modules,
+you can run ``$ isalt --on-master``.
+
+When you're looking into evaluating Runner code, you can only do this one the
+Master side, therefore, you'd need to start the console as ``$ isalt 
+--master``.
+
+You can check the complete list of CLI optional arguments by 
+
+.. code-block:: bash
+
+    $ isalt -h
+    usage: isalt [-h] [--saltenv SALTENV] [--pillarenv PILLARENV] [-c CFG_FILE]
+                 [-e CFG_FILE_ENV_VAR] [--minion-cfg MINION_CFG_FILE]
+                 [--master-cfg MASTER_CFG_FILE] [--minion] [--master]
+                 [--minion-id MINION_ID] [--on-minion] [--on-master]
+
+    ISalt console
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --saltenv SALTENV     Salt environment name.
+      --pillarenv PILLARENV
+                            The Salt environment name to compile the Pillar from.
+      -c CFG_FILE, --cfg-file CFG_FILE
+                            The absolute path to the ISalt config file.
+      -e CFG_FILE_ENV_VAR, --env-var CFG_FILE_ENV_VAR
+                            The name of the environment variable pointing to the
+                            ISalt config file.
+      --minion-cfg MINION_CFG_FILE
+                            The absolute path to the Minion config file.
+      --master-cfg MASTER_CFG_FILE
+                            The absolute path to the Master config file.
+      --minion              Prepare the Salt dunders for the Minion side.
+      --master              Prepare the Salt dunders for the Master side.
+      --minion-id MINION_ID
+                            The Minion ID to compile the Salt dunders for. This
+                            argument is optional, however it may fail when ISalt
+                            is not able to determine the Minion ID, or take it
+                            from the environment variable, etc.
+      --on-minion           Whether should compile the dunders for the Minion
+                            side, starting the ISalt console on the Minion
+                            machine. The main difference is that the Pillar and
+                            Grains are compiled locally, while when using --on-
+                            master, it's using the local cached data.
+      --on-master           Whether should compile the dunders for the Minion
+                            side, starting the ISalt console on the Master
+                            machine. This option is ignored when used in
+                            conjunction with --master.
