@@ -16,7 +16,7 @@ with open("requirements.txt", "r") as fs:
 
 setup(
     name='isalt',
-    version='2019.10.0',
+    version='2019.10.0b1',
     namespace_packages=['isalt'],
     packages=find_packages(),
     author='Mircea Ulinic',
