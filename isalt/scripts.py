@@ -91,6 +91,12 @@ def main():
         help='The absolute path to the Minion config file.'
     )
     parser.add_argument(
+        '--proxy-cfg',
+        default='/etc/salt/proxy',
+        dest='proxy_cfg_file',
+        help='The absolute path to the Proxy Minion config file.'
+    )
+    parser.add_argument(
         '--master-cfg',
         default='/etc/salt/master',
         dest='master_cfg_file',
@@ -102,9 +108,22 @@ def main():
         help='Prepare the Salt dunders for the Minion side.'
     )
     parser.add_argument(
+        '--proxy',
+        action='store_true',
+        help='Prepare the Salt dunders for the Minion side.'
+    )
+    parser.add_argument(
         '--master',
         action='store_true',
         help='Prepare the Salt dunders for the Master side.'
+    )
+    parser.add_argument(
+        '--local',
+        action='store_true',
+        help=(
+            'Override the Minion config and use the local client.\n'
+            'This option loads the file roots config from the Master file.'
+        )
     )
     parser.add_argument(
         '--minion-id',
@@ -144,50 +163,81 @@ def main():
         role = 'minion'
     elif args.master:
         role = 'master'
+    elif args.proxy:
+        role = 'proxy'
     on_minion = args.on_minion or bool(os.environ.get(
         'ISALT_ON_MINION',
         isalt_cfg.get('on_minion', 'True')
     ))
     minion_id = None
-    if role == 'minion':
-        cfg_file = args.minion_cfg_file or os.environ.get(
-            'ISALT_MINION_CONFIG',
-            isalt_cfg.get(
-                'minion_config',
-                salt.config.DEFAULT_MINION_OPTS['conf_file'],
-            )
+    master_cfg_file = args.master_cfg_file or os.environ.get(
+        'ISALT_MASTER_CONFIG',
+        isalt_cfg.get(
+            'master_config',
+            salt.config.DEFAULT_MASTER_OPTS['conf_file'],
         )
-        __opts__ = salt.config.minion_config(cfg_file)
+    )
+    master_opts = salt.config.master_config(master_cfg_file)
+    if role in ('minion', 'proxy'):
+        if role == 'minion':
+            cfg_file = args.minion_cfg_file or os.environ.get(
+                'ISALT_MINION_CONFIG',
+                isalt_cfg.get(
+                    'minion_config',
+                    salt.config.DEFAULT_MINION_OPTS['conf_file'],
+                )
+            )
+            __opts__ = salt.config.minion_config(cfg_file)
+        else:
+            cfg_file = args.proxy_cfg_file or os.environ.get(
+                'ISALT_PROXY_MINION_CONFIG',
+                isalt_cfg.get(
+                    'proxy_minion_config',
+                    salt.config.DEFAULT_PROXY_MINION_OPTS['conf_file'],
+                )
+            )
+            __opts__ = salt.config.proxy_config(cfg_file)
         minion_id = args.minion_id or __opts__.get('id',
             os.environ.get('ISALT_MINION_ID', isalt_cfg.get('minion_id'))
         )
+        local = args.local or isalt_cfg.get('local', False)
+        if local and __opts__.get('file_client') != 'local':
+            __opts__['file_client'] = 'local'
+            for opt, value in master_opts.items():
+                if opt.startswith(
+                    (
+                        'gitfs_',
+                        'git_',
+                        'azurefs_',
+                        'hgfs_',
+                        'minionfs_',
+                        's3fs_',
+                        'svnfs_',
+                        'pillar_roots',
+                        'file_roots'
+                    )
+                ):
+                    __opts__[opt] = value
         if not minion_id:
             raise ISaltError('Unable to determine a Minion ID')
         __opts__['id'] = minion_id
     elif role == 'master':
-        cfg_file = args.master_cfg_file or os.environ.get(
-            'ISALT_MASTER_CONFIG',
-            isalt_cfg.get(
-                'master_config',
-                salt.config.DEFAULT_MASTER_OPTS['conf_file'],
-            )
-        )
-        __opts__ = salt.config.master_config(cfg_file)
+        __opts__ = salt.config.master_config(master_cfg_file)
     __opts__['saltenv'] = args.saltenv
     __opts__['pillarenv'] = args.pillarenv
 
     __proxy__ = None
     __grains__ = None
     __pillar__ = None
-    __utils__ = salt.loader.utils(__opts__)
-    if role == 'minion':
-        __proxy__ = salt.loader.proxy(__opts__, utils=__utils__)
-        __salt__ = salt.loader.minion_mods(
-            __opts__,
-            utils=__utils__,
-            proxy=__proxy__,
-        )
+    if role in ('minion', 'proxy'):
         if args.on_master:
+            __utils__ = salt.loader.utils(__opts__)
+            __proxy__ = salt.loader.proxy(__opts__, utils=__utils__)
+            __salt__ = salt.loader.minion_mods(
+                __opts__,
+                utils=__utils__,
+                proxy=__proxy__,
+            )
             use_cached_pillar = bool(
                 os.environ.get(
                     'ISALT_USE_CACHED_PILLAR',
@@ -201,12 +251,22 @@ def main():
                 grains_fallback=False,
                 use_cached_pillar=use_cached_pillar,
                 pillar_fallback=True,
-                opts=__opts__,
+                opts=master_opts,
             )
             __grains__ = pillar_util.get_minion_grains()
             __pillar__ = pillar_util.get_minion_pillar()
         else:
-            __grains__ = salt.loader.grains(__opts__, proxy=__proxy__)
+            if role == 'minion':
+                sminion = salt.minion.SMinion(__opts__)
+            else:
+                if salt.version.__version_info__ >= (2019, 2, 0):
+                    sminion = salt.minion.SProxyMinion(__opts__)
+                else:
+                    sminion = salt.minion.ProxyMinion(__opts__)
+            __proxy__ = sminion.proxy
+            __utils__ = sminion.utils
+            __salt__ = sminion.functions
+            __grains__ = __opts__['grains']
             __pillar__ = __salt__['pillar.items']()
     elif role == 'master':
         __salt__ = salt.loader.runner(__opts__, utils=__utils__)
