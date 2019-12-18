@@ -110,17 +110,17 @@ def main():
     parser.add_argument(
         '--minion',
         action='store_true',
-        help='Prepare the Salt dunders for the Minion side.'
+        help='Prepare the Salt dunders for the Minion.'
     )
     parser.add_argument(
         '--proxy',
         action='store_true',
-        help='Prepare the Salt dunders for the Minion side.'
+        help='Prepare the Salt dunders for the Proxy Minion.'
     )
     parser.add_argument(
         '--master',
         action='store_true',
-        help='Prepare the Salt dunders for the Master side.'
+        help='Prepare the Salt dunders for the Master.'
     )
     parser.add_argument(
         '--local',
