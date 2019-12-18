@@ -26,6 +26,11 @@ import salt.version
 import salt.utils.master
 import salt.modules.pillar
 
+try:
+    from salt.utils.platform import is_proxy
+except ImportError:
+    from salt.utils import is_proxy
+
 import IPython
 import traitlets.config.loader
 
@@ -226,11 +231,17 @@ def main():
     __opts__['saltenv'] = args.saltenv
     __opts__['pillarenv'] = args.pillarenv
 
+   __utils__ = None
     __proxy__ = None
     __grains__ = None
     __pillar__ = None
     if role in ('minion', 'proxy'):
         if args.on_master:
+            if role == 'proxy':
+                # For Proxy Minions, override the ``is_proxy`` function to
+                # return always true, so we emulate the Proxy behaviour on the
+                # Master (as it was requested to run ISalt on the Master).
+                is_proxy = lambda: True
             __utils__ = salt.loader.utils(__opts__)
             __proxy__ = salt.loader.proxy(__opts__, utils=__utils__)
             __salt__ = salt.loader.minion_mods(
@@ -269,10 +280,12 @@ def main():
             __grains__ = __opts__['grains']
             __pillar__ = __salt__['pillar.items']()
     elif role == 'master':
+        __utils__ = salt.loader.utils(__opts__)
         __salt__ = salt.loader.runner(__opts__, utils=__utils__)
 
     dunders = {
         'salt': salt,
+        '__utils__': __utils__,
         '__opts__': __opts__,
         '__salt__': __salt__,
         '__proxy__': __proxy__,
