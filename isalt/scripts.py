@@ -113,6 +113,10 @@ def main():
         help='Prepare the Salt dunders for the Minion.'
     )
     parser.add_argument(
+        '--proxytype',
+        help='The Salt Proxy module name to use.'
+    )
+    parser.add_argument(
         '--proxy',
         action='store_true',
         help='Prepare the Salt dunders for the Proxy Minion.'
@@ -141,17 +145,6 @@ def main():
         )
     )
     parser.add_argument(
-        '--on-minion',
-        action='store_true',
-        help=(
-            'Whether should compile the dunders for the Minion side, starting '
-            'the ISalt console on the Minion machine.\n'
-            'The main difference is that the Pillar and Grains are compiled '
-            'locally, while when using --on-master, it\'s using the local '
-            'cached data.'
-        )
-    )
-    parser.add_argument(
         '--on-master',
         action='store_true',
         help=(
@@ -161,20 +154,24 @@ def main():
         )
     )
     args = parser.parse_args()
-
     isalt_cfg = salt.config.load_config(args.cfg_file, args.cfg_file_env_var)
+
+    on_master = args.on_master or os.environ.get(
+        'ISALT_ON_MASTER', isalt_cfg.get('on_master', False)
+    )
+    minion_id = args.minion_id or os.environ.get(
+        'ISALT_MINION_ID', isalt_cfg.get('minion_id')
+    )
+    proxytype = args.proxytype or os.environ.get(
+        'ISALT_PROXYTYPE', isalt_cfg.get('proxytype')
+    )
     role = os.environ.get('ISALT_ROLE', isalt_cfg.get('role', 'minion'))
-    if args.minion:
+    if args.minion or minion_id:
         role = 'minion'
-    elif args.master:
-        role = 'master'
-    elif args.proxy:
+    if args.proxy or proxytype:
         role = 'proxy'
-    on_minion = args.on_minion or bool(os.environ.get(
-        'ISALT_ON_MINION',
-        isalt_cfg.get('on_minion', 'True')
-    ))
-    minion_id = None
+    if args.master:
+        role = 'master'
     master_cfg_file = args.master_cfg_file or os.environ.get(
         'ISALT_MASTER_CONFIG',
         isalt_cfg.get(
@@ -202,9 +199,12 @@ def main():
                 )
             )
             __opts__ = salt.config.proxy_config(cfg_file)
-        minion_id = args.minion_id or __opts__.get('id',
-            os.environ.get('ISALT_MINION_ID', isalt_cfg.get('minion_id'))
-        )
+            proxytype = proxytype or __opts__.get('proxy', {}).get('proxytype')
+            if 'proxy' not in __opts__:
+                __opts__['proxy'] = {'proxytype': proxytype}
+            else:
+                __opts__['proxy']['proxytype'] = proxytype
+        minion_id = minion_id or __opts__['id']
         local = args.local or isalt_cfg.get('local', False)
         if local and __opts__.get('file_client') != 'local':
             __opts__['file_client'] = 'local'
@@ -231,12 +231,12 @@ def main():
     __opts__['saltenv'] = args.saltenv
     __opts__['pillarenv'] = args.pillarenv
 
-   __utils__ = None
+    __utils__ = None
     __proxy__ = None
     __grains__ = None
     __pillar__ = None
     if role in ('minion', 'proxy'):
-        if args.on_master:
+        if on_master:
             if role == 'proxy':
                 # For Proxy Minions, override the ``is_proxy`` function to
                 # return always true, so we emulate the Proxy behaviour on the
