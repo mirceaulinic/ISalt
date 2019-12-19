@@ -56,6 +56,10 @@ your environment. It should normally work well with any version.
 Usage
 -----
 
+You can configure various bits of data or conditionals using one or more of the 
+following options, with precedence in this order: ISalt configuration file, 
+environment variables, and CLI arguments.
+
 One of the most important details to keep in mind is the difference between 
 running the code on the Minion side, versus Master side (where we can further
 distinguish between code to be executed as a Runner, vs. Execution Module for
@@ -96,10 +100,16 @@ You can check the complete list of CLI optional arguments by
                             ISalt config file.
       --minion-cfg MINION_CFG_FILE
                             The absolute path to the Minion config file.
+      --proxy-cfg PROXY_CFG_FILE
+                            The absolute path to the Proxy Minion config file.
       --master-cfg MASTER_CFG_FILE
                             The absolute path to the Master config file.
-      --minion              Prepare the Salt dunders for the Minion side.
-      --master              Prepare the Salt dunders for the Master side.
+      --minion              Prepare the Salt dunders for the Minion.
+      --proxy               Prepare the Salt dunders for the Proxy Minion.
+      --master              Prepare the Salt dunders for the Master.
+      --local               Override the Minion config and use the local client.
+                            This option loads the file roots config from the
+                            Master file.
       --minion-id MINION_ID
                             The Minion ID to compile the Salt dunders for. This
                             argument is optional, however it may fail when ISalt
@@ -114,3 +124,184 @@ You can check the complete list of CLI optional arguments by
                             side, starting the ISalt console on the Master
                             machine. This option is ignored when used in
                             conjunction with --master.
+
+Usage Examples
+^^^^^^^^^^^^^^
+
+Using ISalt on the Master
++++++++++++++++++++++++++
+
+Start with ``isalt --master``. Remember that the ``__salt__`` dunder currently 
+maps to the Runner functions, and not to the execution modules.
+
+.. code-block:: bash
+
+  $ isalt --master
+
+  In [1]: # execute the ``test.sleep`` Runner:
+
+  In [2]: # https://docs.saltstack.com/en/latest/ref/runners/all/salt.runners.test.html#module-salt.runners.test
+
+  In [3]: __salt__['test.sleep'](1)
+  1
+  Out[3]: True
+
+
+Using ISalt on the Master, loading the (Proxy) Minion dunders
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+In this mode, you need to specify the Minion ID to use and collect and compile
+data for (otherwise it'll use local machine's hostname):
+
+.. code-block:: bash
+
+    $ isalt --on-master --minion-id jerry
+
+.. note::
+
+    You can equally specify the Minion ID in the proxy/minion configuration 
+    file, from ``--minion-cfg`` or ``--proxy-cfg`` options.
+
+For Proxy Minions, you have to pass the ``--proxy`` CLI argument, e.g.,
+
+.. code-block:: bash
+
+    $ isalt --on-master --minion-id edge-router --proxy
+
+For Proxy Minions, in order to load the ``__salt__`` modules correctly, you may
+have to provide the ``proxytype`` as well into the Proxy configuration file (by 
+default at ``/etc/salt/proxy``, or a different path set using the 
+``--proxy-cfg`` arg) - or using the ``--proxytype`` CLI argument, e.g.,
+
+``/etc/salt/proxy``
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: napalm
+
+And execute as ``isalt --on-master --proxy --minion-id jerry``.
+
+Or directly as ``isalt --on-master --proxytype napalm --minion-id jerry``.
+
+Using ISalt on the (Proxy) Minion
++++++++++++++++++++++++++++++++++
+
+This is the default ISalt mode, and you no longer have to provide the Minion 
+ID, as it's collected from local machine, unless you want to use a specific 
+one. As always, you can have the Minion ID in the Proxy / Minion configuration 
+file, the ``ISALT_MINION_ID`` environment variable, or the ISalt configuration
+file (as the ``minion_id`` option).
+
+Example:
+
+.. code-block:: bash
+
+    $ echo $ISALT_MINION_ID
+    jerry
+    $ isalt
+
+    In [1]: __opts__['id']
+    Out[1]: 'jerry'
+
+.. note::
+
+    The local Proxy / Minion key must be accepted by the Master. To avoid 
+    connecting to the Master, you can use the ``--local`` argument to start the
+    Minion in `Masterless 
+    <https://docs.saltstack.com/en/latest/topics/tutorials/quickstart.html>`__
+    mode - you will however need to make sure that you point to the file (and
+    pillar) roots you need as those won't be pulled from the Master.
+
+    One good way to deal with this is pointing the ``file_roots`` option to the
+    cache directory of the production Minion. For example, you have a Minion
+    that is pulling the production files from the Master, and caching them 
+    under ``/var/cache/salt/minion/files/base`` (whatever would be your 
+    filesystem backend). Now, to use these files when starting ISalt in local 
+    mode, you can reference that dir as:
+
+    ``/etc/salt/minion`` (excerpt)
+
+    .. code-block:: yaml
+
+        file_roots:
+            base:
+              - /var/cache/salt/minion/files/base
+
+    Now, starting with ``isalt --local``, you still load your modules, states,
+    and other files without connecting to the Master.
+
+ISalt configuration file
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Every of the options presented above are available through the ISalt 
+configuration file, by default ``/etc/salt/isalt``. To read the file from 
+a specific path, use the ``-c`` / ``--cfg-file`` args, e.g.,
+
+.. code-block:: bash
+
+    $ isalt -c /path/to/isalt/config/file
+
+Or, alternative, using the ``ISALT_CFG_FILE`` environment variable, e.g.,
+
+.. code-block:: bash
+
+    $ echo $ISALT_CFG_FILE
+    /path/to/isalt/config/file
+    $ isalt
+
+Even more, if you want to read the path to the config file from a different
+environment variable, use the ``-e`` / ``--env-var`` arg:
+
+.. code-block:: bash
+
+    $ echo $ALTERNATIVE_ISALT_CFG_FILE
+    /path/to/another/isalt/config/file
+    $ isalt -e ALTERNATIVE_ISALT_CFG_FILE
+
+ISalt configuration file example
+++++++++++++++++++++++++++++++++
+
+.. code-block:: yaml
+
+    on_master: true
+    proxytype: dummy
+    proxy_cfg: /path/to/proxy/config
+    minion_cfg: /path/to/minion/config
+    master_cfg: /path/to/master/config
+
+With the configuration file above, you can simplify the CLI usage, e.g., from 
+``isalt --on-master --proxy-cfg /path/to/proxy/config --proxytype dummy 
+--minion-id jerry`` to just ``isalt --minion-id jerry``, etc.
+
+Environment Variables
+^^^^^^^^^^^^^^^^^^^^^
+
+``ISALT_CFG_FILE``
+    Absolute path to the ISalt configuration file.
+
+``ISALT_ROLE``
+    The Salt system role. Choose between: ``master``, ``minion``, or ``proxy``.
+
+``ISALT_ON_MASTER``
+    If you're running ISalt on the Master.
+
+``ISALT_MINION_ID``
+    The Minion ID to use.
+
+``ISALT_PROXYTYPE``
+    The Proxy Minion module name to use.
+
+``ISALT_MASTER_CONFIG``
+    Absolute path to the Master configuration file.
+
+``ISALT_MINION_CONFIG``
+    Absolute path to the Minion configuration file.
+
+``ISALT_PROXY_MINION_CONFIG``
+    Absolute path to the Proxy Minion configuration file.
+
+``ISALT_USE_CACHED_PILLAR``
+    When starting in Proxy / Minion mode, on the Master: whether to use the
+    cached Pillars that may be already available for the specified Minion,
+    or compile fresh data.

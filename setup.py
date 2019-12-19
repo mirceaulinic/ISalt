@@ -16,7 +16,7 @@ with open("requirements.txt", "r") as fs:
 
 setup(
     name='isalt',
-    version='2019.12.0',
+    version='2020.1.0',
     namespace_packages=['isalt'],
     packages=find_packages(),
     author='Mircea Ulinic',
@@ -24,7 +24,7 @@ setup(
     description='ISalt: Interactive Salt Programming',
     long_description=long_description,
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Utilities',
