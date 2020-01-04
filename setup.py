@@ -49,5 +49,5 @@ setup(
     include_package_data=True,
     install_requires=reqs,
     entry_points={'console_scripts': ['isalt=isalt.scripts:main']},
-#    data_files=[('man/man1', ['docs/man/isalt.1'])],
+    data_files=[('man/man1', ['docs/man/isalt.1'])],
 )
