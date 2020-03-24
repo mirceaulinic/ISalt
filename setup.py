@@ -28,7 +28,7 @@ setup(
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Utilities',
-        'Topic :: System :: Shells'
+        'Topic :: System :: Shells',
         'Topic :: System :: Systems Administration',
         'Framework :: IPython',
         'Programming Language :: Python',
