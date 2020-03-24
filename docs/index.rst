@@ -81,8 +81,9 @@ You can check the complete list of CLI optional arguments by
     $ isalt -h
     usage: isalt [-h] [--saltenv SALTENV] [--pillarenv PILLARENV] [-c CFG_FILE]
                  [-e CFG_FILE_ENV_VAR] [--minion-cfg MINION_CFG_FILE]
-                 [--master-cfg MASTER_CFG_FILE] [--minion] [--master]
-                 [--minion-id MINION_ID] [--on-minion] [--on-master]
+                 [--proxy-cfg PROXY_CFG_FILE] [--master-cfg MASTER_CFG_FILE]
+                 [--minion] [--proxytype PROXYTYPE] [--proxy] [--sproxy]
+                 [--master] [--local] [--minion-id MINION_ID] [--on-master]
 
     ISalt console
 
@@ -104,6 +105,8 @@ You can check the complete list of CLI optional arguments by
                             The absolute path to the Master config file.
       --minion              Prepare the Salt dunders for the Minion.
       --proxy               Prepare the Salt dunders for the Proxy Minion.
+      --sproxy              Prepare the Salt dunders for the salt-sproxy (Master
+                            side).
       --master              Prepare the Salt dunders for the Master.
       --local               Override the Minion config and use the local client.
                             This option loads the file roots config from the
@@ -122,6 +125,7 @@ You can check the complete list of CLI optional arguments by
                             side, starting the ISalt console on the Master
                             machine. This option is ignored when used in
                             conjunction with --master.
+
 
 Usage Examples
 ^^^^^^^^^^^^^^
