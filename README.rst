@@ -83,8 +83,9 @@ You can check the complete list of CLI optional arguments by
     $ isalt -h
     usage: isalt [-h] [--saltenv SALTENV] [--pillarenv PILLARENV] [-c CFG_FILE]
                  [-e CFG_FILE_ENV_VAR] [--minion-cfg MINION_CFG_FILE]
-                 [--master-cfg MASTER_CFG_FILE] [--minion] [--master]
-                 [--minion-id MINION_ID] [--on-minion] [--on-master]
+                 [--proxy-cfg PROXY_CFG_FILE] [--master-cfg MASTER_CFG_FILE]
+                 [--minion] [--proxytype PROXYTYPE] [--proxy] [--sproxy]
+                 [--master] [--local] [--minion-id MINION_ID] [--on-master]
 
     ISalt console
 
@@ -106,6 +107,8 @@ You can check the complete list of CLI optional arguments by
                             The absolute path to the Master config file.
       --minion              Prepare the Salt dunders for the Minion.
       --proxy               Prepare the Salt dunders for the Proxy Minion.
+      --sproxy              Prepare the Salt dunders for the salt-sproxy (Master
+                            side).
       --master              Prepare the Salt dunders for the Master.
       --local               Override the Minion config and use the local client.
                             This option loads the file roots config from the
@@ -230,6 +233,59 @@ Example:
 
     Now, starting with ``isalt --local``, you still load your modules, states,
     and other files without connecting to the Master.
+
+Using ISalt in conjunction with Salt Super Proxy (Master side)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+.. versionadded:: 2020.3.0
+
+.. note::
+
+    This option requires salt-sproxy to be installed in the same environment as
+    ISalt: ``pip install salt-sproxy``. For simplicity, you can, for example,
+    install as: ``pip install isalt[sproxy]``.
+
+Usage example:
+
+.. code-block:: bash
+
+    $ isalt --sproxy
+
+In this interactive console, you have access to the usual Salt Master dunders, 
+as well as the salt-sproxy features. As a shortcut, you have access to the 
+salt-sproxy core function, through the ``sproxy`` global variable:
+
+.. code-block:: bash
+
+    >>> sproxy
+    <function execute at 0x7fd394075510>
+    >>> sproxy('*', preview_target=True)
+    ['router1',
+     'router2']
+
+In a similar way, this facilitates the execution of any Salt function through
+salt-sproxy, e.g.,
+
+.. code-block:: bash
+
+    >>> sproxy('router1', function='test.ping', static=True)
+    {'router1': True}
+    >>>
+
+.. tip::
+
+    For best results using salt-sproxy, it is recommended to pass the 
+    ``static=True`` argument.
+
+You can also get into the *sproxy* mode by default, by setting the value 
+``role: sproxy`` into the ISalt configuration file (see also the next 
+paragraph).
+
+.. seealso::
+
+    Check also the `salt-sproxy documentation 
+    <https://salt-sproxy.readthedocs.io/en/latest/>`__ for more usage 
+    instructions and examples.
 
 ISalt configuration file
 ^^^^^^^^^^^^^^^^^^^^^^^^

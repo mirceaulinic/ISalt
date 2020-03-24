@@ -28,7 +28,9 @@ setup(
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Utilities',
+        'Topic :: System :: Shells'
         'Topic :: System :: Systems Administration',
+        'Framework :: IPython',
         'Programming Language :: Python',
         'Programming Language :: Cython',
         'Programming Language :: Python :: 3',
@@ -45,9 +47,12 @@ setup(
     ],
     url='https://github.com/mirceaulinic/isalt',
     license="Apache License 2.0",
-    keywords=('salt',),
+    keywords=('Salt', ' Interactive', ' Interpreter', 'Shell', 'Embedding'),
     include_package_data=True,
     install_requires=reqs,
+    extras_require={
+        'sproxy': ['salt-sproxy']
+    },
     entry_points={'console_scripts': ['isalt=isalt.scripts:main']},
     data_files=[('man/man1', ['docs/man/isalt.1'])],
 )

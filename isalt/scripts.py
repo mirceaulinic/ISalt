@@ -31,6 +31,13 @@ try:
 except ImportError:
     from salt.utils import is_proxy
 
+try:
+    import salt_sproxy
+
+    HAS_SPROXY = True
+except ImportError:
+    HAS_SPROXY = False
+
 import IPython
 import traitlets.config.loader
 
@@ -122,6 +129,11 @@ def main():
         help='Prepare the Salt dunders for the Proxy Minion.'
     )
     parser.add_argument(
+        '--sproxy',
+        action='store_true',
+        help='Prepare the Salt dunders for the salt-sproxy (Master side).'
+    )
+    parser.add_argument(
         '--master',
         action='store_true',
         help='Prepare the Salt dunders for the Master.'
@@ -166,12 +178,17 @@ def main():
         'ISALT_PROXYTYPE', isalt_cfg.get('proxytype')
     )
     role = os.environ.get('ISALT_ROLE', isalt_cfg.get('role', 'minion'))
+    if args.sproxy:
+        role = 'sproxy'
     if args.minion or minion_id:
         role = 'minion'
     if args.proxy or proxytype:
         role = 'proxy'
     if args.master:
         role = 'master'
+    if role == 'sproxy':
+        if not HAS_SPROXY:
+            raise ISaltError('salt-sproxy doesn\'t seem to be installed')
     master_cfg_file = args.master_cfg_file or os.environ.get(
         'ISALT_MASTER_CONFIG',
         isalt_cfg.get(
@@ -226,7 +243,7 @@ def main():
         if not minion_id:
             raise ISaltError('Unable to determine a Minion ID')
         __opts__['id'] = minion_id
-    elif role == 'master':
+    elif role in ('master', 'sproxy'):
         __opts__ = salt.config.master_config(master_cfg_file)
     __opts__['saltenv'] = args.saltenv
     __opts__['pillarenv'] = args.pillarenv
@@ -279,7 +296,21 @@ def main():
             __salt__ = sminion.functions
             __grains__ = __opts__['grains']
             __pillar__ = __salt__['pillar.items']()
-    elif role == 'master':
+    elif role in ('master', 'sproxy'):
+        if role == 'sproxy':
+            saltenv = __opts__['saltenv']
+            if saltenv not in __opts__.get('file_roots', {}):
+                __opts__['file_roots'] = {saltenv: []}
+            file_roots = __opts__['file_roots'][saltenv]
+            sproxy_path = salt_sproxy.__path__._path[0]
+            if sproxy_path not in file_roots:
+                file_roots.append(sproxy_path)
+                __opts__['file_roots'][saltenv] = file_roots
+            if 'runner_dirs' not in __opts__:
+                __opts__['runner_dirs'] = []
+            sproxy_runner_path = os.path.join(sproxy_path, '_runners')
+            if sproxy_runner_path not in __opts__['runner_dirs']:
+                __opts__['runner_dirs'].append(sproxy_runner_path)
         __utils__ = salt.loader.utils(__opts__)
         __salt__ = salt.loader.runner(__opts__, utils=__utils__)
 
@@ -292,6 +323,8 @@ def main():
         '__grains__': __grains__,
         '__pillar__': __pillar__,
     }
+    if role == 'sproxy':
+        dunders['sproxy'] = __salt__['proxy.execute']
     sys.argv = sys.argv[:1]
 
     ipy_cfg = traitlets.config.loader.Config()
@@ -300,8 +333,10 @@ def main():
     else:
         ipy_cfg.TerminalInteractiveShell.term_title = False
     ipy_cfg.InteractiveShell.banner1 = BANNER + '''\n
+           Role: {role}
         Salt version: {salt_ver}
        IPython version: {ipython_ver}\n'''.format(
+        role=role.title(),
         salt_ver=salt.version.__version__,
         ipython_ver=IPython.__version__
     )
