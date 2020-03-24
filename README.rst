@@ -237,8 +237,6 @@ Example:
 Using ISalt in conjunction with Salt Super Proxy (Master side)
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-.. versionadded:: 2020.3.0
-
 .. note::
 
     This option requires salt-sproxy to be installed in the same environment as
@@ -281,7 +279,7 @@ You can also get into the *sproxy* mode by default, by setting the value
 ``role: sproxy`` into the ISalt configuration file (see also the next 
 paragraph).
 
-.. seealso::
+.. important::
 
     Check also the `salt-sproxy documentation 
     <https://salt-sproxy.readthedocs.io/en/latest/>`__ for more usage 
