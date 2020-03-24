@@ -302,7 +302,7 @@ def main():
             if saltenv not in __opts__.get('file_roots', {}):
                 __opts__['file_roots'] = {saltenv: []}
             file_roots = __opts__['file_roots'][saltenv]
-            sproxy_path = salt_sproxy.__path__._path[0]
+            sproxy_path = salt_sproxy.__path__[0]
             if sproxy_path not in file_roots:
                 file_roots.append(sproxy_path)
                 __opts__['file_roots'][saltenv] = file_roots
