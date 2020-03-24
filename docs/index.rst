@@ -229,6 +229,59 @@ Example:
     Now, starting with ``isalt --local``, you still load your modules, states,
     and other files without connecting to the Master.
 
+Using ISalt in conjunction with Salt Super Proxy (Master side)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+.. versionadded:: 2020.3.0
+
+.. note::
+
+    This option requires salt-sproxy to be installed in the same environment as
+    ISalt: ``pip install salt-sproxy``. For simplicity, you can, for example,
+    install as: ``pip install isalt[sproxy]``.
+
+Usage example:
+
+.. code-block:: bash
+
+    $ isalt --sproxy
+
+In this interactive console, you have access to the usual Salt Master dunders, 
+as well as the salt-sproxy features. As a shortcut, you have access to the 
+salt-sproxy core function, through the ``sproxy`` global variable:
+
+.. code-block:: bash
+
+    >>> sproxy
+    <function execute at 0x7fd394075510>
+    >>> sproxy('*', preview_target=True)
+    ['router1',
+     'router2']
+
+In a similar way, this facilitates the execution of any Salt function through
+salt-sproxy, e.g.,
+
+.. code-block:: bash
+
+    >>> sproxy('router1', function='test.ping', static=True)
+    {'router1': True}
+    >>>
+
+.. tip::
+
+    For best results using salt-sproxy, it is recommended to pass the 
+    ``static=True`` argument.
+
+You can also get into the *sproxy* mode by default, by setting the value 
+``role: sproxy`` into the ISalt configuration file (see also the next 
+paragraph).
+
+.. seealso::
+
+    Check also the `salt-sproxy documentation 
+    <https://salt-sproxy.readthedocs.io/en/latest/>`__ for more usage 
+    instructions and examples.
+
 ISalt configuration file
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
