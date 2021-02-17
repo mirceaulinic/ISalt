@@ -50,9 +50,7 @@ setup(
     keywords=('Salt', ' Interactive', ' Interpreter', 'Shell', 'Embedding'),
     include_package_data=True,
     install_requires=reqs,
-    extras_require={
-        'sproxy': ['salt-sproxy']
-    },
+    extras_require={'sproxy': ['salt-sproxy']},
     entry_points={'console_scripts': ['isalt=isalt.scripts:main']},
     data_files=[('man/man1', ['docs/man/isalt.1'])],
 )
