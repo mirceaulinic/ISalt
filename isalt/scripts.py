@@ -23,13 +23,10 @@ import salt
 import salt.config
 import salt.loader
 import salt.version
+import salt.utils.napalm
 import salt.utils.master
 import salt.modules.pillar
-
-try:
-    from salt.utils.platform import is_proxy
-except ImportError:
-    from salt.utils import is_proxy
+import salt.utils.platform
 
 try:
     import salt_sproxy
@@ -58,7 +55,7 @@ class ISaltError(Exception):
 
 
 def main():
-    '''
+    """
     The entry point to the ISalt console.
 
     cfg_file
@@ -72,71 +69,62 @@ def main():
 
     pillarenv: ``base``
         The environment name to render the Pillar from.
-    '''
+    """
     parser = argparse.ArgumentParser(description='ISalt console')
-    parser.add_argument(
-        '--saltenv',
-        default='base',
-        help='Salt environment name.'
-    )
+    parser.add_argument('--saltenv', default='base', help='Salt environment name.')
     parser.add_argument(
         '--pillarenv',
         default='base',
-        help='The Salt environment name to compile the Pillar from.'
+        help='The Salt environment name to compile the Pillar from.',
     )
     parser.add_argument(
-        '-c', '--cfg-file',
+        '-c',
+        '--cfg-file',
         default='/etc/salt/isalt',
         dest='cfg_file',
-        help='The absolute path to the ISalt config file.'
+        help='The absolute path to the ISalt config file.',
     )
     parser.add_argument(
-        '-e', '--env-var',
+        '-e',
+        '--env-var',
         default='ISALT_CFG_FILE',
         dest='cfg_file_env_var',
-        help='The name of the environment variable pointing to the ISalt config file.'
+        help='The name of the environment variable pointing to the ISalt config file.',
     )
     parser.add_argument(
         '--minion-cfg',
         default='/etc/salt/minion',
         dest='minion_cfg_file',
-        help='The absolute path to the Minion config file.'
+        help='The absolute path to the Minion config file.',
     )
     parser.add_argument(
         '--proxy-cfg',
         default='/etc/salt/proxy',
         dest='proxy_cfg_file',
-        help='The absolute path to the Proxy Minion config file.'
+        help='The absolute path to the Proxy Minion config file.',
     )
     parser.add_argument(
         '--master-cfg',
         default='/etc/salt/master',
         dest='master_cfg_file',
-        help='The absolute path to the Master config file.'
+        help='The absolute path to the Master config file.',
     )
     parser.add_argument(
-        '--minion',
-        action='store_true',
-        help='Prepare the Salt dunders for the Minion.'
+        '--minion', action='store_true', help='Prepare the Salt dunders for the Minion.'
     )
-    parser.add_argument(
-        '--proxytype',
-        help='The Salt Proxy module name to use.'
-    )
+    parser.add_argument('--proxytype', help='The Salt Proxy module name to use.')
     parser.add_argument(
         '--proxy',
         action='store_true',
-        help='Prepare the Salt dunders for the Proxy Minion.'
+        help='Prepare the Salt dunders for the Proxy Minion.',
     )
     parser.add_argument(
         '--sproxy',
         action='store_true',
-        help='Prepare the Salt dunders for the salt-sproxy (Master side).'
+        help='Prepare the Salt dunders for the salt-sproxy (Master side).',
     )
     parser.add_argument(
-        '--master',
-        action='store_true',
-        help='Prepare the Salt dunders for the Master.'
+        '--master', action='store_true', help='Prepare the Salt dunders for the Master.'
     )
     parser.add_argument(
         '--local',
@@ -144,7 +132,7 @@ def main():
         help=(
             'Override the Minion config and use the local client.\n'
             'This option loads the file roots config from the Master file.'
-        )
+        ),
     )
     parser.add_argument(
         '--minion-id',
@@ -154,7 +142,7 @@ def main():
             'This argument is optional, however it may fail when ISalt is not '
             'able to determine the Minion ID, or take it from the environment '
             'variable, etc.'
-        )
+        ),
     )
     parser.add_argument(
         '--on-master',
@@ -163,7 +151,7 @@ def main():
             'Whether should compile the dunders for the Minion side, starting '
             'the ISalt console on the Master machine.\n'
             'This option is ignored when used in conjunction with --master.'
-        )
+        ),
     )
     args = parser.parse_args()
     isalt_cfg = salt.config.load_config(args.cfg_file, args.cfg_file_env_var)
@@ -194,7 +182,7 @@ def main():
         isalt_cfg.get(
             'master_config',
             salt.config.DEFAULT_MASTER_OPTS['conf_file'],
-        )
+        ),
     )
     master_opts = salt.config.master_config(master_cfg_file)
     if role in ('minion', 'proxy'):
@@ -204,7 +192,7 @@ def main():
                 isalt_cfg.get(
                     'minion_config',
                     salt.config.DEFAULT_MINION_OPTS['conf_file'],
-                )
+                ),
             )
             __opts__ = salt.config.minion_config(cfg_file)
         else:
@@ -213,9 +201,9 @@ def main():
                 isalt_cfg.get(
                     'proxy_minion_config',
                     salt.config.DEFAULT_PROXY_MINION_OPTS['conf_file'],
-                )
+                ),
             )
-            __opts__ = salt.config.proxy_config(cfg_file)
+            __opts__ = salt.config.proxy_config(cfg_file, minion_id=minion_id)
             proxytype = proxytype or __opts__.get('proxy', {}).get('proxytype')
             if 'proxy' not in __opts__:
                 __opts__['proxy'] = {'proxytype': proxytype}
@@ -236,7 +224,7 @@ def main():
                         's3fs_',
                         'svnfs_',
                         'pillar_roots',
-                        'file_roots'
+                        'file_roots',
                     )
                 ):
                     __opts__[opt] = value
@@ -252,24 +240,23 @@ def main():
     __proxy__ = None
     __grains__ = None
     __pillar__ = None
+
+    if role == 'proxy':
+
+        def _is_proxy():
+            return True
+
+        def _napalm_is_proxy(opts):
+            return opts.get('proxy', {}).get('proxytype') == 'napalm'
+
+        salt.utils.platform.is_proxy = _is_proxy
+        salt.utils.napalm.is_proxy = _napalm_is_proxy
+
     if role in ('minion', 'proxy'):
         if on_master:
-            if role == 'proxy':
-                # For Proxy Minions, override the ``is_proxy`` function to
-                # return always true, so we emulate the Proxy behaviour on the
-                # Master (as it was requested to run ISalt on the Master).
-                is_proxy = lambda: True
-            __utils__ = salt.loader.utils(__opts__)
-            __proxy__ = salt.loader.proxy(__opts__, utils=__utils__)
-            __salt__ = salt.loader.minion_mods(
-                __opts__,
-                utils=__utils__,
-                proxy=__proxy__,
-            )
             use_cached_pillar = bool(
                 os.environ.get(
-                    'ISALT_USE_CACHED_PILLAR',
-                    isalt_cfg.get('use_cached_pillar', True)
+                    'ISALT_USE_CACHED_PILLAR', isalt_cfg.get('use_cached_pillar', True)
                 )
             )
             pillar_util = salt.utils.master.MasterPillarUtil(
@@ -281,12 +268,48 @@ def main():
                 pillar_fallback=True,
                 opts=master_opts,
             )
-            __grains__ = pillar_util.get_minion_grains()
-            __pillar__ = pillar_util.get_minion_pillar()
+
+            grains = pillar_util.get_minion_grains()
+            __grains__ = grains[minion_id] if grains and minion_id in grains else {}
+            pillar = pillar_util.get_minion_pillar()
+            __pillar__ = pillar[minion_id] if pillar and minion_id in pillar else {}
+            if __pillar__ and 'proxy' in __pillar__:
+                __opts__['proxy'] = __pillar__['proxy']
+
+            __utils__ = salt.loader.utils(__opts__)
+            __proxy__ = salt.loader.proxy(__opts__, utils=__utils__)
+            __salt__ = salt.loader.minion_mods(
+                __opts__,
+                utils=__utils__,
+                proxy=__proxy__,
+            )
         else:
             if role == 'minion':
                 sminion = salt.minion.SMinion(__opts__)
             else:
+                use_cached_pillar = bool(
+                    os.environ.get(
+                        'ISALT_USE_CACHED_PILLAR',
+                        isalt_cfg.get('use_cached_pillar', True),
+                    )
+                )
+                pillar_util = salt.utils.master.MasterPillarUtil(
+                    minion_id,
+                    'glob',
+                    use_cached_grains=True,
+                    grains_fallback=False,
+                    use_cached_pillar=use_cached_pillar,
+                    pillar_fallback=True,
+                    opts=master_opts,
+                )
+                grains = pillar_util.get_minion_grains()
+                __grains__ = grains[minion_id] if grains and minion_id in grains else {}
+                pillar = pillar_util.get_minion_pillar()
+                __pillar__ = pillar[minion_id] if pillar and minion_id in pillar else {}
+
+                if __pillar__ and 'proxy' in __pillar__:
+                    __opts__['proxy'] = __pillar__['proxy']
+
                 if salt.version.__version_info__ >= (2019, 2, 0):
                     sminion = salt.minion.SProxyMinion(__opts__)
                 else:
@@ -332,13 +355,16 @@ def main():
         ipy_cfg.TerminalInteractiveShell.term_title_format = 'ISalt'
     else:
         ipy_cfg.TerminalInteractiveShell.term_title = False
-    ipy_cfg.InteractiveShell.banner1 = BANNER + '''\n
+    ipy_cfg.InteractiveShell.banner1 = (
+        BANNER
+        + '''\n
            Role: {role}
         Salt version: {salt_ver}
        IPython version: {ipython_ver}\n'''.format(
-        role=role.title(),
-        salt_ver=salt.version.__version__,
-        ipython_ver=IPython.__version__
+            role=role.title(),
+            salt_ver=salt.version.__version__,
+            ipython_ver=IPython.__version__,
+        )
     )
     IPython.start_ipython(config=ipy_cfg, user_ns=dunders)
 

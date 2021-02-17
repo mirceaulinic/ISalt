@@ -16,7 +16,7 @@ with open("requirements.txt", "r") as fs:
 
 setup(
     name='isalt',
-    version='2020.3.1',
+    version='2021.2.0',
     namespace_packages=['isalt'],
     packages=find_packages(),
     author='Mircea Ulinic',
@@ -50,9 +50,7 @@ setup(
     keywords=('Salt', ' Interactive', ' Interpreter', 'Shell', 'Embedding'),
     include_package_data=True,
     install_requires=reqs,
-    extras_require={
-        'sproxy': ['salt-sproxy']
-    },
+    extras_require={'sproxy': ['salt-sproxy']},
     entry_points={'console_scripts': ['isalt=isalt.scripts:main']},
     data_files=[('man/man1', ['docs/man/isalt.1'])],
 )
