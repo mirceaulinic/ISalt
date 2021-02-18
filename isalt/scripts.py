@@ -325,15 +325,26 @@ def main():
             if saltenv not in __opts__.get('file_roots', {}):
                 __opts__['file_roots'] = {saltenv: []}
             file_roots = __opts__['file_roots'][saltenv]
-            sproxy_path = salt_sproxy.__path__[0]
+            sproxy_path = list(salt_sproxy.__path__)[0]
             if sproxy_path not in file_roots:
                 file_roots.append(sproxy_path)
                 __opts__['file_roots'][saltenv] = file_roots
-            if 'runner_dirs' not in __opts__:
-                __opts__['runner_dirs'] = []
-            sproxy_runner_path = os.path.join(sproxy_path, '_runners')
-            if sproxy_runner_path not in __opts__['runner_dirs']:
-                __opts__['runner_dirs'].append(sproxy_runner_path)
+            sproxy_dirs = [
+                sproxy_dir
+                for sproxy_dir in os.listdir(sproxy_path)
+                if sproxy_dir.startswith('_')
+                and not sproxy_dir.startswith('__')
+                and os.path.isdir(os.path.join(sproxy_path, sproxy_dir))
+            ]
+            for sproxy_dir in sproxy_dirs:
+                sproxy_dirs_opts = '{}_dirs'.format(
+                    sproxy_dir.replace('_', '', 1).replace('s', '', -1)
+                )
+                if sproxy_dirs_opts not in __opts__:
+                    __opts__[sproxy_dirs_opts] = []
+                sproxy_dir_path = os.path.join(sproxy_path, sproxy_dir)
+                if sproxy_dir_path not in __opts__[sproxy_dirs_opts]:
+                    __opts__[sproxy_dirs_opts].append(sproxy_dir_path)
         __utils__ = salt.loader.utils(__opts__)
         __salt__ = salt.loader.runner(__opts__, utils=__utils__)
 
@@ -355,16 +366,13 @@ def main():
         ipy_cfg.TerminalInteractiveShell.term_title_format = 'ISalt'
     else:
         ipy_cfg.TerminalInteractiveShell.term_title = False
-    ipy_cfg.InteractiveShell.banner1 = (
-        BANNER
-        + '''\n
+    ipy_cfg.InteractiveShell.banner1 = BANNER + '''\n
            Role: {role}
         Salt version: {salt_ver}
        IPython version: {ipython_ver}\n'''.format(
-            role=role.title(),
-            salt_ver=salt.version.__version__,
-            ipython_ver=IPython.__version__,
-        )
+        role=role.title(),
+        salt_ver=salt.version.__version__,
+        ipython_ver=IPython.__version__,
     )
     IPython.start_ipython(config=ipy_cfg, user_ns=dunders)
 
