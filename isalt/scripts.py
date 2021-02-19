@@ -284,6 +284,16 @@ def main():
                 proxy=__proxy__,
             )
         else:
+            if not os.path.exists(__opts__['cachedir']):
+                try:
+                    os.mkdir(__opts__['cachedir'])
+                except OSError as ose:
+                    print(
+                        'Unable to create the cache directory',
+                        __opts__['cachedir'],
+                        'please make sure you are running ISalt with the correct permissions',
+                    )
+                    raise ose
             if role == 'minion':
                 sminion = salt.minion.SMinion(__opts__)
             else:
@@ -330,16 +340,14 @@ def main():
                 file_roots.append(sproxy_path)
                 __opts__['file_roots'][saltenv] = file_roots
             sproxy_dirs = [
-                sproxy_dir
+                (sproxy_dir[:-1] if sproxy_dir[-1] == 's' else sproxy_dir)
                 for sproxy_dir in os.listdir(sproxy_path)
                 if sproxy_dir.startswith('_')
                 and not sproxy_dir.startswith('__')
                 and os.path.isdir(os.path.join(sproxy_path, sproxy_dir))
             ]
             for sproxy_dir in sproxy_dirs:
-                sproxy_dirs_opts = '{}_dirs'.format(
-                    sproxy_dir.replace('_', '', 1).replace('s', '', -1)
-                )
+                sproxy_dirs_opts = '{}_dirs'.format(sproxy_dir.replace('_', '', 1))
                 if sproxy_dirs_opts not in __opts__:
                     __opts__[sproxy_dirs_opts] = []
                 sproxy_dir_path = os.path.join(sproxy_path, sproxy_dir)
