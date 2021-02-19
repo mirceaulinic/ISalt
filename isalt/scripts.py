@@ -284,6 +284,16 @@ def main():
                 proxy=__proxy__,
             )
         else:
+            if not os.path.exists(__opts__['cachedir']):
+                try:
+                    os.mkdir(__opts__['cachedir'])
+                except OSError as ose:
+                    print(
+                        'Unable to create the cache directory',
+                        __opts__['cachedir'],
+                        'please make sure you are running ISalt with the correct permissions',
+                    )
+                    raise ose
             if role == 'minion':
                 sminion = salt.minion.SMinion(__opts__)
             else:
